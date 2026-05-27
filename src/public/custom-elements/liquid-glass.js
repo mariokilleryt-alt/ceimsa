@@ -1,39 +1,80 @@
 /* eslint-env browser */
 
-function getDisplacementMap({ width, height, radius, depth }) {
-  const safeDepth = Math.min(depth, Math.floor(height / 3), Math.floor(width / 3));
+/* =========================================================
+   CEIMSA LIQUID GLASS - Wix Custom Element
+   Basado en tu código original de GlassElement + DisplacementUtils
+   Tag para Wix: ceimsa-liquid-glass
+========================================================= */
 
-  const svg = `
-  <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-    <style>.mix{mix-blend-mode:screen;}</style>
+/* =========================
+   DISPLACEMENT UTILS
+========================= */
+
+function getDisplacementMap({ height, width, radius, depth }) {
+  const safeDepth = Math.max(
+    2,
+    Math.min(depth, Math.floor(width / 4), Math.floor(height / 4))
+  );
+
+  const svg = `<svg height="${height}" width="${width}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .mix { mix-blend-mode: screen; }
+    </style>
 
     <defs>
-      <linearGradient id="x" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="#f00"/>
-        <stop offset="50%" stop-color="#808080"/>
-        <stop offset="100%" stop-color="#000"/>
+      <linearGradient 
+        id="Y" 
+        x1="0" 
+        x2="0" 
+        y1="${Math.ceil((radius / height) * 15)}%" 
+        y2="${Math.floor(100 - (radius / height) * 15)}%">
+        <stop offset="0%" stop-color="#0F0" />
+        <stop offset="100%" stop-color="#000" />
       </linearGradient>
 
-      <linearGradient id="y" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="#0f0"/>
-        <stop offset="50%" stop-color="#808080"/>
-        <stop offset="100%" stop-color="#000"/>
+      <linearGradient 
+        id="X" 
+        x1="${Math.ceil((radius / width) * 15)}%" 
+        x2="${Math.floor(100 - (radius / width) * 15)}%"
+        y1="0" 
+        y2="0">
+        <stop offset="0%" stop-color="#F00" />
+        <stop offset="100%" stop-color="#000" />
       </linearGradient>
     </defs>
 
-    <rect width="${width}" height="${height}" fill="#808080"/>
-    <g filter="blur(${safeDepth}px)">
-      <rect width="${width}" height="${height}" fill="url(#x)" class="mix"/>
-      <rect width="${width}" height="${height}" fill="url(#y)" class="mix"/>
+    <rect x="0" y="0" height="${height}" width="${width}" fill="#808080" />
+
+    <g filter="blur(2px)">
+      <rect x="0" y="0" height="${height}" width="${width}" fill="#000080" />
+
+      <rect
+        x="0"
+        y="0"
+        height="${height}"
+        width="${width}"
+        fill="url(#Y)"
+        class="mix"
+      />
+
+      <rect
+        x="0"
+        y="0"
+        height="${height}"
+        width="${width}"
+        fill="url(#X)"
+        class="mix"
+      />
 
       <rect
         x="${safeDepth}"
         y="${safeDepth}"
-        width="${width - safeDepth * 2}"
-        height="${height - safeDepth * 2}"
+        height="${height - 2 * safeDepth}"
+        width="${width - 2 * safeDepth}"
+        fill="#808080"
         rx="${radius}"
         ry="${radius}"
-        fill="#808080"
+        filter="blur(${safeDepth}px)"
       />
     </g>
   </svg>`;
@@ -41,46 +82,124 @@ function getDisplacementMap({ width, height, radius, depth }) {
   return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
 }
 
-function getDisplacementFilter({ width, height, radius, depth, strength }) {
-  const map = getDisplacementMap({ width, height, radius, depth });
+function getDisplacementFilter({
+  height,
+  width,
+  radius,
+  depth,
+  strength = 100,
+  chromaticAberration = 2
+}) {
+  const displacementMapUrl = getDisplacementMap({
+    height,
+    width,
+    radius,
+    depth
+  });
 
-  const svg = `
-  <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  const svg = `<svg height="${height}" width="${width}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <filter id="liquid" color-interpolation-filters="sRGB">
-        <feImage href="${map}" x="0" y="0" width="${width}" height="${height}" result="map"/>
+      <filter id="displace" color-interpolation-filters="sRGB">
+        <feImage
+          x="0"
+          y="0"
+          height="${height}"
+          width="${width}"
+          href="${displacementMapUrl}"
+          result="displacementMap"
+        />
+
         <feDisplacementMap
           in="SourceGraphic"
-          in2="map"
+          in2="displacementMap"
+          scale="${strength + chromaticAberration * 2}"
+          xChannelSelector="R"
+          yChannelSelector="G"
+        />
+
+        <feColorMatrix
+          type="matrix"
+          values="1 0 0 0 0
+                  0 0 0 0 0
+                  0 0 0 0 0
+                  0 0 0 1 0"
+          result="displacedR"
+        />
+
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="displacementMap"
+          scale="${strength + chromaticAberration}"
+          xChannelSelector="R"
+          yChannelSelector="G"
+        />
+
+        <feColorMatrix
+          type="matrix"
+          values="0 0 0 0 0
+                  0 1 0 0 0
+                  0 0 0 0 0
+                  0 0 0 1 0"
+          result="displacedG"
+        />
+
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="displacementMap"
           scale="${strength}"
           xChannelSelector="R"
           yChannelSelector="G"
         />
+
+        <feColorMatrix
+          type="matrix"
+          values="0 0 0 0 0
+                  0 0 0 0 0
+                  0 0 1 0 0
+                  0 0 0 1 0"
+          result="displacedB"
+        />
+
+        <feBlend in="displacedR" in2="displacedG" mode="screen" />
+        <feBlend in2="displacedB" mode="screen" />
       </filter>
     </defs>
   </svg>`;
 
-  return "data:image/svg+xml;utf8," + encodeURIComponent(svg) + "#liquid";
+  return "data:image/svg+xml;utf8," + encodeURIComponent(svg) + "#displace";
 }
+
+/* =========================
+   CUSTOM ELEMENT PARA WIX
+========================= */
 
 class CeimsaLiquidGlass extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this.clicked = false;
     this.resizeObserver = null;
+    this.attachShadow({ mode: "open" });
+  }
+
+  static get observedAttributes() {
+    return [
+      "radius",
+      "depth",
+      "blur",
+      "strength",
+      "chromatic-aberration",
+      "background-color",
+      "debug"
+    ];
   }
 
   connectedCallback() {
     this.render();
-
-    this.resizeObserver = new ResizeObserver(() => {
-      this.updateLiquid();
-    });
-
-    this.resizeObserver.observe(this);
+    this.setupEvents();
+    this.setupResizeObserver();
 
     requestAnimationFrame(() => {
-      this.updateLiquid();
+      this.updateStyles();
     });
   }
 
@@ -90,6 +209,89 @@ class CeimsaLiquidGlass extends HTMLElement {
     }
   }
 
+  attributeChangedCallback() {
+    if (this.shadowRoot) {
+      requestAnimationFrame(() => this.updateStyles());
+    }
+  }
+
+  get radius() {
+    const customRadius = parseInt(this.getAttribute("radius"));
+    if (!Number.isNaN(customRadius)) return customRadius;
+
+    const rect = this.getBoundingClientRect();
+    return Math.round(rect.height / 2) || 40;
+  }
+
+  get baseDepth() {
+    return parseInt(this.getAttribute("depth")) || 12;
+  }
+
+  get depth() {
+    return this.clicked ? Math.round(this.baseDepth * 1.35) : this.baseDepth;
+  }
+
+  get blur() {
+    return parseFloat(this.getAttribute("blur")) || 1.4;
+  }
+
+  get strength() {
+    return parseInt(this.getAttribute("strength")) || 85;
+  }
+
+  get chromaticAberration() {
+    return parseInt(this.getAttribute("chromatic-aberration")) || 3;
+  }
+
+  get backgroundColor() {
+    return this.getAttribute("background-color") || "rgba(255,255,255,0.10)";
+  }
+
+  get debug() {
+    return this.getAttribute("debug") === "true";
+  }
+
+  hasSVGFilterSupport() {
+    const test = document.createElement("div");
+    test.style.backdropFilter = "blur(1px)";
+
+    if (!test.style.backdropFilter) return false;
+
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isChromium =
+      /chrome|chromium|crios|edg/.test(userAgent) &&
+      !/firefox|fxios/.test(userAgent);
+
+    return isChromium;
+  }
+
+  setupResizeObserver() {
+    if (!window.ResizeObserver) return;
+
+    this.resizeObserver = new ResizeObserver(() => {
+      this.updateStyles();
+    });
+
+    this.resizeObserver.observe(this);
+  }
+
+  setupEvents() {
+    const glass = this.shadowRoot.querySelector(".glass-box");
+    if (!glass) return;
+
+    glass.addEventListener("mousedown", () => {
+      this.clicked = true;
+      this.updateStyles();
+    });
+
+    document.addEventListener("mouseup", () => {
+      if (this.clicked) {
+        this.clicked = false;
+        this.updateStyles();
+      }
+    });
+  }
+
   render() {
     this.shadowRoot.innerHTML = `
       <style>
@@ -97,115 +299,144 @@ class CeimsaLiquidGlass extends HTMLElement {
           display: block;
           width: 100%;
           height: 100%;
-          min-height: 60px;
+          min-height: 54px;
           position: relative;
           overflow: visible;
         }
 
-        .glass {
+        .glass-box {
           position: absolute;
           inset: 0;
           overflow: hidden;
           border-radius: 999px;
+          cursor: default;
 
           background:
-            radial-gradient(circle at 18% 18%, rgba(255,255,255,0.65), transparent 18%),
-            radial-gradient(circle at 82% 0%, rgba(80,170,255,0.35), transparent 35%),
-            linear-gradient(135deg, rgba(255,255,255,0.18), rgba(40,120,255,0.12));
+            radial-gradient(circle at 18% 18%, rgba(255,255,255,0.58), transparent 20%),
+            radial-gradient(circle at 80% 0%, rgba(90,170,255,0.20), transparent 34%),
+            linear-gradient(135deg, rgba(255,255,255,0.16), rgba(40,120,255,0.06));
 
-          border: 1px solid rgba(210,235,255,0.7);
+          border: 1px solid rgba(220,240,255,0.58);
 
           box-shadow:
-            inset 0 2px 4px rgba(255,255,255,0.85),
-            inset 0 -22px 35px rgba(0,80,200,0.32),
-            inset 20px 0 35px rgba(255,255,255,0.12),
-            0 0 28px rgba(70,160,255,0.5),
-            0 18px 50px rgba(0,0,0,0.35);
+            inset 0 1px 2px rgba(255,255,255,0.95),
+            inset 0 -18px 30px rgba(0,60,160,0.25),
+            inset 18px 0 28px rgba(255,255,255,0.10),
+            0 0 18px rgba(70,160,255,0.28),
+            0 14px 38px rgba(0,0,0,0.32);
+
+          transition:
+            transform 0.14s ease,
+            box-shadow 0.14s ease,
+            background 0.14s ease;
         }
 
-        .glass::before {
+        .glass-box::before {
           content: "";
           position: absolute;
-          inset: -70%;
+          inset: -65%;
           background:
             linear-gradient(
               115deg,
-              transparent 35%,
-              rgba(255,255,255,0.55) 47%,
-              rgba(120,200,255,0.28) 54%,
-              transparent 68%
+              transparent 36%,
+              rgba(255,255,255,0.60) 47%,
+              rgba(120,200,255,0.22) 54%,
+              transparent 67%
             );
-          filter: blur(14px);
+          filter: blur(13px);
           opacity: 0.85;
-          animation: shine 5s ease-in-out infinite alternate;
+          animation: liquidShine 5.8s ease-in-out infinite alternate;
           pointer-events: none;
         }
 
-        .glass::after {
+        .glass-box::after {
           content: "";
           position: absolute;
           inset: 2px;
           border-radius: inherit;
           background:
-            linear-gradient(to bottom, rgba(255,255,255,0.45), transparent 38%),
-            radial-gradient(circle at 50% 115%, rgba(0,140,255,0.5), transparent 42%);
+            linear-gradient(to bottom, rgba(255,255,255,0.42), transparent 40%),
+            radial-gradient(circle at 50% 120%, rgba(0,130,255,0.35), transparent 44%);
           mix-blend-mode: screen;
           pointer-events: none;
         }
 
-        @keyframes shine {
+        .glass-box:active {
+          transform: scale(0.985);
+        }
+
+        @keyframes liquidShine {
           from {
-            transform: translateX(-40%) rotate(8deg) scale(1);
+            transform: translateX(-42%) rotate(8deg) scale(1);
           }
 
           to {
-            transform: translateX(35%) rotate(12deg) scale(1.08);
+            transform: translateX(36%) rotate(12deg) scale(1.08);
           }
         }
       </style>
 
-      <div class="glass"></div>
+      <div class="glass-box"></div>
     `;
   }
 
-  updateLiquid() {
-    const glass = this.shadowRoot.querySelector(".glass");
+  updateStyles() {
+    const glass = this.shadowRoot.querySelector(".glass-box");
     if (!glass) return;
 
     const rect = this.getBoundingClientRect();
 
-    const width = Math.max(Math.round(rect.width), 100);
-    const height = Math.max(Math.round(rect.height), 50);
-
-    const radius = Math.round(height / 2);
-    const depth = Math.max(Math.round(height * 0.16), 8);
-    const strength = Math.max(Math.round(width * 0.045), 35);
-
-    const filter = getDisplacementFilter({
-      width,
-      height,
-      radius,
-      depth,
-      strength
-    });
+    const width = Math.max(Math.round(rect.width), 80);
+    const height = Math.max(Math.round(rect.height), 40);
+    const radius = this.radius;
 
     glass.style.borderRadius = `${radius}px`;
 
+    if (this.debug) {
+      glass.style.background = `url("${getDisplacementMap({
+        height,
+        width,
+        radius,
+        depth: this.depth
+      })}")`;
+      glass.style.backdropFilter = "none";
+      glass.style.webkitBackdropFilter = "none";
+      return;
+    }
+
+    if (!this.hasSVGFilterSupport()) {
+      glass.style.background = this.backgroundColor;
+      glass.style.backdropFilter = `blur(${this.blur * 3}px) saturate(1.6) brightness(1.08)`;
+      glass.style.webkitBackdropFilter = `blur(${this.blur * 3}px) saturate(1.6) brightness(1.08)`;
+      return;
+    }
+
+    const filterUrl = getDisplacementFilter({
+      height,
+      width,
+      radius,
+      depth: this.depth,
+      strength: this.strength,
+      chromaticAberration: this.chromaticAberration
+    });
+
+    glass.style.background = this.backgroundColor;
+
     glass.style.backdropFilter = `
-      blur(2px)
-      url("${filter}")
-      blur(3px)
+      blur(${this.blur / 2}px)
+      url("${filterUrl}")
+      blur(${this.blur}px)
       brightness(1.12)
-      saturate(1.8)
+      saturate(1.65)
       contrast(1.08)
     `;
 
     glass.style.webkitBackdropFilter = `
-      blur(2px)
-      url("${filter}")
-      blur(3px)
+      blur(${this.blur / 2}px)
+      url("${filterUrl}")
+      blur(${this.blur}px)
       brightness(1.12)
-      saturate(1.8)
+      saturate(1.65)
       contrast(1.08)
     `;
   }
