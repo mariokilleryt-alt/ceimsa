@@ -1,9 +1,8 @@
-// CEIMSA_BUILD: 20260527014248
+// CEIMSA_BUILD: 20260527014952
 /* eslint-env browser */
 
 /* =========================================================
    CEIMSA LIQUID GLASS - Wix Custom Element
-   Basado en tu código original de GlassElement + DisplacementUtils
    Tag para Wix: ceimsa-liquid-glass
 ========================================================= */
 
@@ -88,8 +87,8 @@ function getDisplacementFilter({
   width,
   radius,
   depth,
-  strength = 100,
-  chromaticAberration = 2
+  strength = 160,
+  chromaticAberration = 4
 }) {
   const displacementMapUrl = getDisplacementMap({
     height,
@@ -189,8 +188,7 @@ class CeimsaLiquidGlass extends HTMLElement {
       "blur",
       "strength",
       "chromatic-aberration",
-      "background-color",
-      "debug"
+      "background-color"
     ];
   }
 
@@ -217,7 +215,7 @@ class CeimsaLiquidGlass extends HTMLElement {
   }
 
   get radius() {
-    const customRadius = parseInt(this.getAttribute("radius"));
+    const customRadius = parseInt(this.getAttribute("radius"), 10);
     if (!Number.isNaN(customRadius)) return customRadius;
 
     const rect = this.getBoundingClientRect();
@@ -225,7 +223,11 @@ class CeimsaLiquidGlass extends HTMLElement {
   }
 
   get baseDepth() {
-    return parseInt(this.getAttribute("depth")) || 12;
+    const customDepth = parseInt(this.getAttribute("depth"), 10);
+    if (!Number.isNaN(customDepth)) return customDepth;
+
+    const rect = this.getBoundingClientRect();
+    return Math.max(Math.round(rect.height * 0.22), 12);
   }
 
   get depth() {
@@ -233,32 +235,34 @@ class CeimsaLiquidGlass extends HTMLElement {
   }
 
   get blur() {
-    return parseFloat(this.getAttribute("blur")) || 1.4;
+    return parseFloat(this.getAttribute("blur")) || 0.8;
   }
 
   get strength() {
-    return parseInt(this.getAttribute("strength")) || 85;
+    return parseInt(this.getAttribute("strength"), 10) || 180;
   }
 
   get chromaticAberration() {
-    return parseInt(this.getAttribute("chromatic-aberration")) || 3;
+    return parseInt(this.getAttribute("chromatic-aberration"), 10) || 5;
   }
 
   get backgroundColor() {
-    return this.getAttribute("background-color") || "rgba(255,255,255,0.10)";
-  }
-
-  get debug() {
-    return this.getAttribute("debug") === "true";
+    return this.getAttribute("background-color") || "rgba(255,255,255,0.075)";
   }
 
   hasSVGFilterSupport() {
     const test = document.createElement("div");
-    test.style.backdropFilter = "blur(1px)";
 
-    if (!test.style.backdropFilter) return false;
+    test.style.backdropFilter = "blur(1px)";
+    test.style.webkitBackdropFilter = "blur(1px)";
+
+    const supportsBackdrop =
+      test.style.backdropFilter || test.style.webkitBackdropFilter;
+
+    if (!supportsBackdrop) return false;
 
     const userAgent = navigator.userAgent.toLowerCase();
+
     const isChromium =
       /chrome|chromium|crios|edg/.test(userAgent) &&
       !/firefox|fxios/.test(userAgent);
@@ -313,18 +317,18 @@ class CeimsaLiquidGlass extends HTMLElement {
           cursor: default;
 
           background:
-            radial-gradient(circle at 18% 18%, rgba(255,255,255,0.58), transparent 20%),
-            radial-gradient(circle at 80% 0%, rgba(90,170,255,0.20), transparent 34%),
-            linear-gradient(135deg, rgba(255,255,255,0.16), rgba(40,120,255,0.06));
+            radial-gradient(circle at 18% 18%, rgba(255,255,255,0.50), transparent 20%),
+            radial-gradient(circle at 80% 0%, rgba(90,170,255,0.16), transparent 34%),
+            linear-gradient(135deg, rgba(255,255,255,0.12), rgba(40,120,255,0.045));
 
-          border: 1px solid rgba(220,240,255,0.58);
+          border: 1px solid rgba(220,240,255,0.55);
 
           box-shadow:
-            inset 0 1px 2px rgba(255,255,255,0.95),
-            inset 0 -18px 30px rgba(0,60,160,0.25),
+            inset 0 1px 2px rgba(255,255,255,0.92),
+            inset 0 -18px 30px rgba(0,60,160,0.22),
             inset 18px 0 28px rgba(255,255,255,0.10),
-            0 0 18px rgba(70,160,255,0.28),
-            0 14px 38px rgba(0,0,0,0.32);
+            0 0 18px rgba(70,160,255,0.24),
+            0 14px 38px rgba(0,0,0,0.30);
 
           transition:
             transform 0.14s ease,
@@ -340,12 +344,12 @@ class CeimsaLiquidGlass extends HTMLElement {
             linear-gradient(
               115deg,
               transparent 36%,
-              rgba(255,255,255,0.60) 47%,
-              rgba(120,200,255,0.22) 54%,
+              rgba(255,255,255,0.55) 47%,
+              rgba(120,200,255,0.20) 54%,
               transparent 67%
             );
           filter: blur(13px);
-          opacity: 0.85;
+          opacity: 0.80;
           animation: liquidShine 5.8s ease-in-out infinite alternate;
           pointer-events: none;
         }
@@ -356,8 +360,8 @@ class CeimsaLiquidGlass extends HTMLElement {
           inset: 2px;
           border-radius: inherit;
           background:
-            linear-gradient(to bottom, rgba(255,255,255,0.42), transparent 40%),
-            radial-gradient(circle at 50% 120%, rgba(0,130,255,0.35), transparent 44%);
+            linear-gradient(to bottom, rgba(255,255,255,0.38), transparent 40%),
+            radial-gradient(circle at 50% 120%, rgba(0,130,255,0.30), transparent 44%);
           mix-blend-mode: screen;
           pointer-events: none;
         }
@@ -393,22 +397,30 @@ class CeimsaLiquidGlass extends HTMLElement {
 
     glass.style.borderRadius = `${radius}px`;
 
-    if (this.debug) {
-      glass.style.background = `url("${getDisplacementMap({
-        height,
-        width,
-        radius,
-        depth: this.depth
-      })}")`;
-      glass.style.backdropFilter = "none";
-      glass.style.webkitBackdropFilter = "none";
-      return;
-    }
+    const layeredBackground = `
+      radial-gradient(circle at 18% 18%, rgba(255,255,255,0.50), transparent 20%),
+      radial-gradient(circle at 80% 0%, rgba(90,170,255,0.16), transparent 34%),
+      linear-gradient(135deg, rgba(255,255,255,0.12), rgba(40,120,255,0.045)),
+      ${this.backgroundColor}
+    `;
+
+    glass.style.background = layeredBackground;
 
     if (!this.hasSVGFilterSupport()) {
-      glass.style.background = this.backgroundColor;
-      glass.style.backdropFilter = `blur(${this.blur * 3}px) saturate(1.6) brightness(1.08)`;
-      glass.style.webkitBackdropFilter = `blur(${this.blur * 3}px) saturate(1.6) brightness(1.08)`;
+      glass.style.backdropFilter = `
+        blur(${this.blur * 3}px)
+        saturate(1.6)
+        brightness(1.08)
+        contrast(1.05)
+      `;
+
+      glass.style.webkitBackdropFilter = `
+        blur(${this.blur * 3}px)
+        saturate(1.6)
+        brightness(1.08)
+        contrast(1.05)
+      `;
+
       return;
     }
 
@@ -421,14 +433,12 @@ class CeimsaLiquidGlass extends HTMLElement {
       chromaticAberration: this.chromaticAberration
     });
 
-    glass.style.background = this.backgroundColor;
-
     glass.style.backdropFilter = `
       blur(${this.blur / 2}px)
       url("${filterUrl}")
       blur(${this.blur}px)
       brightness(1.12)
-      saturate(1.65)
+      saturate(1.75)
       contrast(1.08)
     `;
 
@@ -437,7 +447,7 @@ class CeimsaLiquidGlass extends HTMLElement {
       url("${filterUrl}")
       blur(${this.blur}px)
       brightness(1.12)
-      saturate(1.65)
+      saturate(1.75)
       contrast(1.08)
     `;
   }
