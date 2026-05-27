@@ -1,14 +1,34 @@
-// CEIMSA_BUILD: 20260527022818
+// CEIMSA_BUILD: 20260527023127
 /* eslint-env browser */
 
-class BaseCeimsaGlass extends HTMLElement {
+class CeimsaGlassCardV2 extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
   }
 
+  static get observedAttributes() {
+    return ["radius", "blur", "opacity"];
+  }
+
   connectedCallback() {
     this.render();
+  }
+
+  attributeChangedCallback() {
+    this.render();
+  }
+
+  get radius() {
+    return this.getAttribute("radius") || "24";
+  }
+
+  get blur() {
+    return this.getAttribute("blur") || "18";
+  }
+
+  get opacity() {
+    return this.getAttribute("opacity") || "0.26";
   }
 
   render() {
@@ -25,44 +45,63 @@ class BaseCeimsaGlass extends HTMLElement {
         }
 
         .glass {
+          position: absolute;
+          inset: 0;
           width: 100%;
           height: 100%;
           box-sizing: border-box;
-          position: relative;
           overflow: hidden;
-          border-radius: 22px;
+
+          border-radius: ${this.radius}px;
 
           background:
-            linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.06)),
-            linear-gradient(135deg, rgba(80,145,255,0.34), rgba(5,25,70,0.28));
+            linear-gradient(
+              180deg,
+              rgba(255,255,255,0.22) 0%,
+              rgba(255,255,255,0.08) 38%,
+              rgba(70,125,210,${this.opacity}) 100%
+            );
 
-          backdrop-filter: blur(18px) saturate(170%) brightness(1.12);
-          -webkit-backdrop-filter: blur(18px) saturate(170%) brightness(1.12);
+          backdrop-filter:
+            blur(${this.blur}px)
+            saturate(170%)
+            brightness(1.12)
+            contrast(1.08);
 
-          border: 1px solid rgba(230,245,255,0.62);
+          -webkit-backdrop-filter:
+            blur(${this.blur}px)
+            saturate(170%)
+            brightness(1.12)
+            contrast(1.08);
+
+          border: 1px solid rgba(225, 240, 255, 0.55);
 
           box-shadow:
             inset 0 1px 2px rgba(255,255,255,0.75),
-            inset 0 -14px 28px rgba(0,60,160,0.24),
-            0 0 24px rgba(80,160,255,0.32),
-            0 16px 40px rgba(0,0,0,0.32);
+            inset 0 -18px 30px rgba(0,55,150,0.24),
+            0 0 24px rgba(80,150,255,0.24),
+            0 16px 42px rgba(0,0,0,0.34);
         }
 
         .glass::before {
           content: "";
           position: absolute;
-          left: 4%;
           top: 5%;
-          width: 92%;
+          left: 6%;
+          width: 88%;
           height: 38%;
           border-radius: inherit;
-          background: linear-gradient(
-            180deg,
-            rgba(255,255,255,0.42),
-            rgba(255,255,255,0.10),
-            transparent
-          );
+
+          background:
+            linear-gradient(
+              180deg,
+              rgba(255,255,255,0.46),
+              rgba(255,255,255,0.14),
+              transparent
+            );
+
           filter: blur(2px);
+          opacity: 0.78;
           pointer-events: none;
         }
 
@@ -72,9 +111,22 @@ class BaseCeimsaGlass extends HTMLElement {
           inset: 0;
           border-radius: inherit;
           pointer-events: none;
+
+          background:
+            radial-gradient(
+              circle at 20% 10%,
+              rgba(255,255,255,0.30),
+              transparent 28%
+            ),
+            radial-gradient(
+              circle at 85% 100%,
+              rgba(40,130,255,0.28),
+              transparent 38%
+            );
+
           box-shadow:
             inset 0 0 0 1px rgba(255,255,255,0.10),
-            inset 0 -18px 32px rgba(0,20,70,0.18);
+            inset 0 -14px 26px rgba(0,25,80,0.20);
         }
       </style>
 
@@ -83,13 +135,6 @@ class BaseCeimsaGlass extends HTMLElement {
   }
 }
 
-class CeimsaCleanGlass extends BaseCeimsaGlass {}
-class CeimsaLiquidGlass extends BaseCeimsaGlass {}
-
-if (!window.customElements.get("ceimsa-clean-glass")) {
-  window.customElements.define("ceimsa-clean-glass", CeimsaCleanGlass);
-}
-
-if (!window.customElements.get("ceimsa-liquid-glass")) {
-  window.customElements.define("ceimsa-liquid-glass", CeimsaLiquidGlass);
+if (!window.customElements.get("ceimsa-glass-card-v2")) {
+  window.customElements.define("ceimsa-glass-card-v2", CeimsaGlassCardV2);
 }
